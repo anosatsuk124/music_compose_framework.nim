@@ -1,6 +1,7 @@
 import macros
 import strformat
 import std/strutils
+import std/options
 
 proc getWelcomeMessage*(): string = "Hello, World!"
 
@@ -16,45 +17,38 @@ func mkScoreEcho(stmtStr: string): string =
 
   return newStrBody
 
-proc mkScoreBlock(body: NimNode, strBody: string): string {.compileTime.} =
-  var newStrBody = strBody
+func mkScoreBlock(body: NimNode): string {.compileTime.} =
+  var newStrBody = ""
   for stmt in body:
-    var stmtStr = fmt"{repr(stmt)}"
-    echo "stmtStr: ", stmtStr, "stmt.kind: ", stmt.kind
-    if startsWith(stmtStr, ScorePrefix):
-      stmtStr.removePrefix(ScorePrefix)
-      newStrBody.add(mkScoreEcho(stmtStr))
-
-    else:
-      for stStr in stmtStr.split("\n"):
-        let stStrIndentCounts = stStr.indentation()
-        var stStrUnindented = stStr.unindent()
-        if startsWith(stStrUnindented, ScorePrefix):
-          stStrUnindented.removePrefix(ScorePrefix)
-          newStrBody.add(mkScoreEcho(stStrUnindented).indent(stStrIndentCounts))
-        else:
-          newStrBody.add(stStr)
-          newStrBody.add("\n")
-
+    expectKind(stmt, nnkStrLit)
+    newStrBody.add(stmt.strVal&"\n")
 
   return newStrBody
 
-macro mkScore*(name: untyped, body: untyped): untyped =
+macro n*(body: untyped): untyped =
   var strBody = ""
-  strBody.add(mkScoreBlock(body, strBody))
-  echo "strBody: ", strBody
-  parseStmt(fmt"""
-proc {repr(name)}*() =
-{strBody}"""
-  )
+  strBody.add(mkScoreBlock(body))
+  parseStmt("\"\"\""&strBody&"\"\"\"")
 
-mkScore Part1:
-  ! l8 o5
-  ! dd {dd}{cc}dd d{ff}gg gffg dd2
-  for _ in 0..2:
-    for _ in 0..2:
-      for _ in 0..2:
-        ! dd{ff}a bbb{ff}ga
-        echo "a"
-# [2 dd{ff}a bbb{ff} ga:> ]
-# """
+macro n*(arg: untyped, body: untyped): untyped =
+  var strBody = ""
+  expectKind(arg, nnkIntLit)
+  let n = arg.intVal
+  for i in 0..<n:
+    strBody.add(mkScoreBlock(body))
+  parseStmt("\"\"\""&strBody&"\"\"\"")
+
+macro defScore*(body: untyped): untyped =
+  var newBody = newNimNode(nnkBracket)
+  for stmt in body:
+    newBody.add(stmt)
+  quote do:
+    join(`newbody`)
+
+macro defScore*(name: untyped, body: untyped): untyped =
+  var newBody = newNimNode(nnkBracket)
+  for stmt in body:
+    newBody.add(stmt)
+  quote do:
+    proc `name`(): string =
+      return join(`newbody`)
