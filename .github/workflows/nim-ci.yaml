@@ -1,0 +1,19 @@
+name: Nim CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Nim
+        uses: jiro4989/setup-nim-action@v2
+      - name: Install dependencies
+        run: nimble install -y
+      - name: Run tests
+        run: nimble test
