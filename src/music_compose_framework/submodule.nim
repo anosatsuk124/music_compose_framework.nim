@@ -3,8 +3,6 @@ import strformat
 import std/strutils
 import std/options
 
-proc getWelcomeMessage*(): string = "Hello, World!"
-
 const ScorePrefix = "!"
 
 func mkScoreEcho(stmtStr: string): string =
